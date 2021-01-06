@@ -49,6 +49,41 @@ class BasePlugin:
     Interval = 5*3
     runAgain = Interval
     
+    windrichting = {
+        "Noord"	:	0,
+        "NNNO"	:	11.25,
+        "NNO"	:	22.5,
+        "ONNO"	:	33.75,
+        "NO"	:	45,
+        "NONO"	:	56.25,
+        "ONO"	:	67.5,
+        "OONO"	:	78.75,
+        "Oost"	    :	90,
+        "OOZO"	:	101.25,
+        "OZO"	:	112.5,
+        "ZOZO"	:	123.75,
+        "ZO"	:	135,
+        "OZZO"	:	146.25,
+        "ZZO"	:	157.5,
+        "ZZZO"	:	168.75,
+        "Zuid"	    :	180,
+        "ZZZW"	:	191.25,
+        "ZZW"	:	202.5,
+        "WZZW"	:	213.75,
+        "ZW"	:	225,
+        "ZWZW"	:	236.25,
+        "WZW"	:	247.5,
+        "WWZW"	:	258.75,
+        "West"	    :	270,
+        "WWNW"	:	281.25,
+        "WNW"	:	292.5,
+        "NWNW"	:	303.75,
+        "NW"	:	315,
+        "WNNW"	:	326.25,
+        "NNW"	:	337.5,
+        "NNNW"	:	348.75
+    }
+    
     def __init__(self):
         return
 
@@ -87,32 +122,42 @@ class BasePlugin:
             Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description)
             
     def processResponse(self,Response):
-        Domoticz.Log("Response received:"+str(Response))
+        #Domoticz.Log("Response received:"+str(Response))
         if not(1 in Devices):
            Domoticz.Device(Name="Temperatuur", Unit=1, TypeName="Temp+Hum+Baro").Create()
         if not(2 in Devices):
            Domoticz.Device(Name="Verwachting", Unit=2, TypeName="Text").Create()
         if not(3 in Devices):
            Domoticz.Device(Name="Wind", Unit=3, TypeName="Wind+Temp+Chill").Create()
-        #forecast   use 1 for now
-        # // Pressure Status
-        #if (pres < 966) {
-        #    forecast = "4";
-        #} else if (pres < 993) {
-        #    forecast = "3";
-        #} else if (pres < 1007) {
-        #    forecast = "2";
-        #} else if (pres < 1013) {
-        #    forecast = "3";
-        #} else if (pres < 1033) {
-        #    forecast = "0";
-        #} else {
-        #    forecast = "1";
-        #}
-        Devices[1].Update(0,Response[0]['temp']+";"+Response[0]['lv']+";1;"+Response[0]['luchtd']+";1")
-        Devices[2].Update(0,Response[0]["samenv"]+"<br>"+Response[0]["verw"])
-        Devices[2].Update(0,"-1;"+Response[0]["windr"]+";"+Response[0]["windms"]+";"+Response[0]["windms"]+";"+Response[0]["temp"]+";"+Response[0]["gtemp"])
+        #calculate forecast from air pressure
+        pres=float(Response['luchtd'])
+        if (pres < 990):     # Rain
+            forecast = "4"
+        elif (pres < 1010):  # Cloudy
+            forecast = "3"
+        elif (pres < 1030):  # Partly Cloudy
+            forecast = "2"
+        else:
+            forecast = "1"   # Sunny
         
+        humi = float(Response['lv'])
+        if (humi < 31):
+            humistat = "2"
+        elif (humi > 69):
+            humistat = "3"
+        elif (humi > 34 and humi < 66 and temp > 21 and temp < 27):
+            humistat = "1"
+        else:
+            humistat = "0"
+        try:     
+           winddegrees=self.windrichting[Response["windr"]]    
+        except:
+           winddegrees =0
+           Domoticz.Log("Wind not found:"+Response["windr"])
+           
+        Devices[1].Update(0,Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)
+        Devices[2].Update(0,Response["samenv"]+"<br>"+Response["verw"])
+        Devices[3].Update(0,str(winddegrees)+";"+Response["windr"]+";"+Response["windms"]+";"+Response["windms"]+";"+Response["temp"]+";"+Response["gtemp"])
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
@@ -123,13 +168,12 @@ class BasePlugin:
 
         if (Status == 200):
             if ((self.disconnectCount & 1) == 1):
-                Domoticz.Log("Good Response received from vbus, Disconnecting.")
+                Domoticz.Log("Good Response received from KNMI, Disconnecting.")
                 self.httpConn.Disconnect()                
             else:
-                Domoticz.Log("Good Response received from vbus, Dropping connection.")
+                Domoticz.Log("Good Response received from KNMI, Dropping connection.")
                 self.httpConn = None
             self.disconnectCount = self.disconnectCount + 1
-            Domoticz.Log("data"+str(Data["Data"][:17],'cp1252'))
                 
             if(str(Data["Data"][:17],'cp1252')=="Dagelijkse limiet"):
                 Devices[2].Update(0,str(Data["Data"],'UTF-8'))
@@ -137,7 +181,7 @@ class BasePlugin:
                 Response = json.loads( Data["Data"].decode("utf-8", "ignore") )
 
                 #Domoticz.Log("KNMI:"+str(type(Response)))
-                self.processResponse(Response["liveweer"])
+                self.processResponse(Response["liveweer"][0])
                 
         elif (Status == 302):
             Domoticz.Log("KNMI returned a Page Moved Error.")
