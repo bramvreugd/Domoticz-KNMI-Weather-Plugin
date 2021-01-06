@@ -129,6 +129,20 @@ class BasePlugin:
            Domoticz.Device(Name="Verwachting", Unit=2, TypeName="Text").Create()
         if not(3 in Devices):
            Domoticz.Device(Name="Wind", Unit=3, TypeName="Wind+Temp+Chill").Create()
+        
+        if not(4 in Devices):
+           Domoticz.Device(Name="Min temp tommorow", Unit=4, TypeName="Temperature").Create()
+        if not(5 in Devices):
+           Domoticz.Device(Name="Max temp tommorow", Unit=5, TypeName="Temperature").Create()
+        if not(6 in Devices):
+           Domoticz.Device(Name="Winddirection tommorrow", Unit=6, TypeName="Text").Create()
+        if not(7 in Devices):                                                         
+           Domoticz.Device(Name="Windforce tommorrow", Unit=7, TypeName="Custom", Options= {"Custom": "1;Bft"} ).Create()
+        if not(8 in Devices):
+           Domoticz.Device(Name="Rain  tommorrow", Unit=8, TypeName="Percentage").Create()
+        if not(9 in Devices):
+           Domoticz.Device(Name="Sun tommorrow", Unit=9, TypeName="Percentage").Create()     
+           
         #calculate forecast from air pressure
         pres=float(Response['luchtd'])
         if (pres < 990):     # Rain
@@ -158,6 +172,14 @@ class BasePlugin:
         Devices[1].Update(0,Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)
         Devices[2].Update(0,Response["samenv"]+"<br>"+Response["verw"])
         Devices[3].Update(0,str(winddegrees)+";"+Response["windr"]+";"+Response["windms"]+";"+Response["windms"]+";"+Response["temp"]+";"+Response["gtemp"])
+        
+        Devices[4].Update(0,Response["d1tmin"])
+        Devices[5].Update(0,Response["d1tmax"])
+        Devices[6].Update(0,Response["d1windr"])
+        Devices[7].Update(0,Response["d1windk"])
+        Devices[8].Update(0,Response["d1neerslag"])
+        Devices[9].Update(0,Response["d1zon"])
+        
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
