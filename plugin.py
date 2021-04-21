@@ -88,6 +88,8 @@ class BasePlugin:
         return
 
     def onStart(self):
+        Domoticz.Log("onstart")
+
         if Parameters["Mode6"] != "0":
             Domoticz.Debugging(int(Parameters["Mode6"]))
             DumpConfigToLog()
@@ -122,7 +124,7 @@ class BasePlugin:
             Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description)
             
     def processResponse(self,Response):
-        #Domoticz.Log("Response received:"+str(Response))
+        Domoticz.Log("Response received:"+str(Response))
         if not(1 in Devices):
            Domoticz.Device(Name="Temperatuur", Unit=1, TypeName="Temp+Hum+Baro").Create()
         if not(2 in Devices):
@@ -139,7 +141,7 @@ class BasePlugin:
         if not(7 in Devices):                                                         
            Domoticz.Device(Name="Windforce tommorrow", Unit=7, TypeName="Custom", Options= {"Custom": "1;Bft"} ).Create()
         if not(8 in Devices):
-           Domoticz.Device(Name="Rain  tommorrow", Unit=8, TypeName="Percentage").Create()
+           Domoticz.Device(Name="Rain tommorrow", Unit=8, TypeName="Percentage").Create()
         if not(9 in Devices):
            Domoticz.Device(Name="Sun tommorrow", Unit=9, TypeName="Percentage").Create()     
            
@@ -155,6 +157,7 @@ class BasePlugin:
             forecast = "1"   # Sunny
         
         humi = float(Response['lv'])
+        temp = float(Response['temp'])
         if (humi < 31):
             humistat = "2"
         elif (humi > 69):
