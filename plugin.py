@@ -144,6 +144,16 @@ class BasePlugin:
            Domoticz.Device(Name="Rain tommorrow", Unit=8, TypeName="Percentage").Create()
         if not(9 in Devices):
            Domoticz.Device(Name="Sun tommorrow", Unit=9, TypeName="Percentage").Create()     
+        if not(10 in Devices):
+           Domoticz.Device(Name="Sun", Unit=10, TypeName="Percentage").Create()     
+        if not(11 in Devices):
+           Domoticz.Device(Name="
+                           
+                           ", Unit=11, TypeName="Text").Create()     
+        if not(12 in Devices):
+           Domoticz.Device(Name="Dew point", Unit=12, TypeName="Temperature").Create()     
+        if not(13 in Devices):
+           Domoticz.Device(Name="Visibility", Unit=13, Type=243, Subtype=1).Create()     
            
         #calculate forecast from air pressure
         pres=float(Response['luchtd'])
@@ -182,6 +192,15 @@ class BasePlugin:
         Devices[7].Update(0,Response["d1windk"])
         Devices[8].Update(0,Response["d1neerslag"])
         Devices[9].Update(0,Response["d1zon"])
+        Devices[10].Update(0,Response["d0zon"])
+        if(Response["alarm"] !="0"):
+           #/json.htm?type=command&param=sendnotification&subject="KNMI alarm"&body="+Response["alarmtxt"]
+           Devices[11].Update(0,Response["alarmtxt"])
+        else:
+           Devices[11].Update(0,"")
+        Devices[12].Update(0,Response["dauwp"])
+        Devices[13].Update(0,Response["zicht"])
+           
         
                 
     def onMessage(self, Connection, Data):
