@@ -6,7 +6,7 @@
 #
 #
 """
-<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.0.0" externallink="https://www.github.com">
+<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.1.0" externallink="https://www.github.com">
     <description>
         <h2>KNMI weer info</h2><br/>
         Maximaal 300 x per dag mag de data opgevraagd worden. Door niet minder 1 x per 5 minuten op te halen blijft het aantal onder de 288.
@@ -49,41 +49,6 @@ class BasePlugin:
     Interval = 5*3
     runAgain = Interval
     
-    windrichting = {
-        "Noord"	:	0,
-        "NNNO"	:	11.25,
-        "NNO"	:	22.5,
-        "ONNO"	:	33.75,
-        "NO"	:	45,
-        "NONO"	:	56.25,
-        "ONO"	:	67.5,
-        "OONO"	:	78.75,
-        "Oost"	    :	90,
-        "OOZO"	:	101.25,
-        "OZO"	:	112.5,
-        "ZOZO"	:	123.75,
-        "ZO"	:	135,
-        "OZZO"	:	146.25,
-        "ZZO"	:	157.5,
-        "ZZZO"	:	168.75,
-        "Zuid"	    :	180,
-        "ZZZW"	:	191.25,
-        "ZZW"	:	202.5,
-        "WZZW"	:	213.75,
-        "ZW"	:	225,
-        "ZWZW"	:	236.25,
-        "WZW"	:	247.5,
-        "WWZW"	:	258.75,
-        "West"	    :	270,
-        "WWNW"	:	281.25,
-        "WNW"	:	292.5,
-        "NWNW"	:	303.75,
-        "NW"	:	315,
-        "WNNW"	:	326.25,
-        "NNW"	:	337.5,
-        "NNNW"	:	348.75
-    }
-    
     def __init__(self):
         return
 
@@ -102,7 +67,6 @@ class BasePlugin:
         Domoticz.Log("Sending connect")
         self.httpConn.Connect()
         Domoticz.Log("Sended connect")
-
 
     def onStop(self):
         Domoticz.Log("onStop - Plugin is stopping.")
@@ -133,28 +97,34 @@ class BasePlugin:
            Domoticz.Device(Name="Wind", Unit=3, TypeName="Wind+Temp+Chill").Create()
         
         if not(4 in Devices):
-           Domoticz.Device(Name="Min temp tommorow", Unit=4, TypeName="Temperature").Create()
+           Domoticz.Device(Name="Min temp morgen", Unit=4, TypeName="Temperature").Create()
         if not(5 in Devices):
-           Domoticz.Device(Name="Max temp tommorow", Unit=5, TypeName="Temperature").Create()
+           Domoticz.Device(Name="Max temp morgen", Unit=5, TypeName="Temperature").Create()
         if not(6 in Devices):
-           Domoticz.Device(Name="Winddirection tommorrow", Unit=6, TypeName="Text").Create()
+           Domoticz.Device(Name="Wind morgen", Unit=6, TypeName="Wind").Create()
         if not(7 in Devices):                                                         
-           Domoticz.Device(Name="Windforce tommorrow", Unit=7, TypeName="Custom", Options= {"Custom": "1;Bft"} ).Create()
+           Domoticz.Device(Name="Wind overmorgen", Unit=7, TypeName="Wind").Create()
         if not(8 in Devices):
-           Domoticz.Device(Name="Rain tommorrow", Unit=8, TypeName="Percentage").Create()
+           Domoticz.Device(Name="Regen morgen", Unit=8, TypeName="Percentage").Create()
         if not(9 in Devices):
-           Domoticz.Device(Name="Sun tommorrow", Unit=9, TypeName="Percentage").Create()     
+           Domoticz.Device(Name="Zon morgen", Unit=9, TypeName="Percentage").Create()     
         if not(10 in Devices):
-           Domoticz.Device(Name="Sun", Unit=10, TypeName="Percentage").Create()     
+           Domoticz.Device(Name="Zon", Unit=10, TypeName="Percentage").Create()     
         if not(11 in Devices):
-           Domoticz.Device(Name="
-                           
-                           ", Unit=11, TypeName="Text").Create()     
+           Domoticz.Device(Name="Alarm", Unit=11, TypeName="Text").Create()     
         if not(12 in Devices):
-           Domoticz.Device(Name="Dew point", Unit=12, TypeName="Temperature").Create()     
+           Domoticz.Device(Name="Dauwpunt", Unit=12, TypeName="Temperature").Create()     
         if not(13 in Devices):
-           Domoticz.Device(Name="Visibility", Unit=13, Type=243, Subtype=1).Create()     
-           
+           Domoticz.Device(Name="Zicht", Unit=13, Type=243, Subtype=1).Create()     
+        if not(14 in Devices):
+           Domoticz.Device(Name="Min temp overmorgen", Unit=14, TypeName="Temperature").Create()
+        if not(15 in Devices):
+           Domoticz.Device(Name="Max temp overmorgen", Unit=15, TypeName="Temperature").Create()
+        if not(16 in Devices):
+           Domoticz.Device(Name="Regen overmorgen", Unit=16, TypeName="Percentage").Create()
+        if not(17 in Devices):
+           Domoticz.Device(Name="Zon overmorgen", Unit=17, TypeName="Percentage").Create()     
+                
         #calculate forecast from air pressure
         pres=float(Response['luchtd'])
         if (pres < 990):     # Rain
@@ -176,32 +146,27 @@ class BasePlugin:
             humistat = "1"
         else:
             humistat = "0"
-        try:     
-           winddegrees=self.windrichting[Response["windr"]]    
-        except:
-           winddegrees =0
-           Domoticz.Log("Wind not found:"+Response["windr"])
-           
+                   
         Devices[1].Update(0,Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)
         Devices[2].Update(0,Response["samenv"]+"<br>"+Response["verw"])
-        Devices[3].Update(0,str(winddegrees)+";"+Response["windr"]+";"+Response["windms"]+";"+Response["windms"]+";"+Response["temp"]+";"+Response["gtemp"])
-        
+        Devices[3].Update(0,Response["d0windrgr"]+";"+Response["windr"]+";"+Response["windms"]+";"+Response["windms"]+";"+Response["temp"]+";"+Response["gtemp"])
         Devices[4].Update(0,Response["d1tmin"])
         Devices[5].Update(0,Response["d1tmax"])
-        Devices[6].Update(0,Response["d1windr"])
-        Devices[7].Update(0,Response["d1windk"])
+        Devices[6].Update(0,Response["d1windrgr"]+";"+Response["d1windr"]+";"+Response["d1windms"]+";"+Response["d1windms"]+";"+Response["d1tmax"]+";"+Response["d1tmax"])
+        Devices[7].Update(0,Response["d2windrgr"]+";"+Response["d2windr"]+";"+Response["d2windms"]+";"+Response["d2windms"]+";"+Response["d2tmax"]+";"+Response["d2tmax"])
         Devices[8].Update(0,Response["d1neerslag"])
         Devices[9].Update(0,Response["d1zon"])
         Devices[10].Update(0,Response["d0zon"])
         if(Response["alarm"] !="0"):
-           #/json.htm?type=command&param=sendnotification&subject="KNMI alarm"&body="+Response["alarmtxt"]
            Devices[11].Update(0,Response["alarmtxt"])
         else:
            Devices[11].Update(0,"")
         Devices[12].Update(0,Response["dauwp"])
         Devices[13].Update(0,Response["zicht"])
-           
-        
+        Devices[14].Update(0,Response["d2tmin"])
+        Devices[15].Update(0,Response["d2tmax"])
+        Devices[16].Update(0,Response["d2neerslag"])        
+        Devices[17].Update(0,Response["d2zon"])
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
