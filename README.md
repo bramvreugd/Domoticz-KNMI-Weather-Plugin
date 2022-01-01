@@ -7,7 +7,7 @@ This plugin receives the temperatures, the weather forecast and wind information
 - More precise wind degree
 - Default names of devices in dutch. Prediction and wind direction of KNMi is also in dutch.
 
-# before upgrade 
+# Before upgradeto version 1.1
 Before upgrade you should remove wind direction tommorow and windforce tommorow device. 
 
 # Usage
