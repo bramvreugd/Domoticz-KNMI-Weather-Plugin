@@ -6,7 +6,7 @@
 #
 #
 """
-<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.1.0" externallink="https://www.github.com">
+<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.2.0" externallink="https://www.github.com">
     <description>
         <h2>KNMI weer info</h2><br/>
         Maximaal 300 x per dag mag de data opgevraagd worden. Door niet minder 1 x per 5 minuten op te halen blijft het aantal onder de 288.
@@ -85,8 +85,8 @@ class BasePlugin:
                        }
             Connection.Send(sendData)
         else:
-            Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description)
-            
+            Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description) 
+                
     def processResponse(self,Response):
         Domoticz.Log("Response received:"+str(Response))
         if not(1 in Devices):
@@ -146,27 +146,26 @@ class BasePlugin:
             humistat = "1"
         else:
             humistat = "0"
-                   
-        Devices[1].Update(0,Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)
-        Devices[2].Update(0,Response["samenv"]+"<br>"+Response["verw"])
-        Devices[3].Update(0,Response["d0windrgr"]+";"+Response["windr"]+";"+Response["windms"]+";"+Response["windms"]+";"+Response["temp"]+";"+Response["gtemp"])
-        Devices[4].Update(0,Response["d1tmin"])
-        Devices[5].Update(0,Response["d1tmax"])
-        Devices[6].Update(0,Response["d1windrgr"]+";"+Response["d1windr"]+";"+Response["d1windms"]+";"+Response["d1windms"]+";"+Response["d1tmax"]+";"+Response["d1tmax"])
-        Devices[7].Update(0,Response["d2windrgr"]+";"+Response["d2windr"]+";"+Response["d2windms"]+";"+Response["d2windms"]+";"+Response["d2tmax"]+";"+Response["d2tmax"])
-        Devices[8].Update(0,Response["d1neerslag"])
-        Devices[9].Update(0,Response["d1zon"])
-        Devices[10].Update(0,Response["d0zon"])
+        UpdateDevice(1, 0, Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)                   
+        UpdateDevice(2,0,Response["samenv"]+"<br>"+Response["verw"])
+        UpdateDevice(3,0,Response["d0windrgr"]+";"+Response["windr"]+";"+str(10*float(Response["windms"]))+";"+str(10*float(Response["windms"]))+";"+Response["temp"]+";"+Response["gtemp"])
+        UpdateDevice(4,0,Response["d1tmin"])
+        UpdateDevice(5,0,Response["d1tmax"])
+        UpdateDevice(6,0,Response["d1windrgr"]+";"+Response["d1windr"]+";"+str(10*float(Response["d1windms"]))+";"+str(10*float(Response["d1windms"]))+";"+Response["d1tmax"]+";"+Response["d1tmax"])
+        UpdateDevice(7,0,Response["d2windrgr"]+";"+Response["d2windr"]+";"+str(10*float(Response["d2windms"]))+";"+str(10*float(Response["d2windms"]))+";"+Response["d2tmax"]+";"+Response["d2tmax"])
+        UpdateDevice(8,0,Response["d1neerslag"])
+        UpdateDevice(9,0,Response["d1zon"])
+        UpdateDevice(10,0,Response["d0zon"])
         if(Response["alarm"] !="0"):
-           Devices[11].Update(0,Response["alarmtxt"])
+           UpdateDevice(11,0,Response["alarmtxt"])
         else:
-           Devices[11].Update(0,"")
-        Devices[12].Update(0,Response["dauwp"])
-        Devices[13].Update(0,Response["zicht"])
-        Devices[14].Update(0,Response["d2tmin"])
-        Devices[15].Update(0,Response["d2tmax"])
-        Devices[16].Update(0,Response["d2neerslag"])        
-        Devices[17].Update(0,Response["d2zon"])
+           UpdateDevice(11,0,"")
+        UpdateDevice(12,0,Response["dauwp"])
+        UpdateDevice(13,0,Response["zicht"])
+        UpdateDevice(14,0,Response["d2tmin"])
+        UpdateDevice(15,0,Response["d2tmax"])
+        UpdateDevice(16,0,Response["d2neerslag"])        
+        UpdateDevice(17,0,Response["d2zon"])
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
@@ -234,6 +233,7 @@ class BasePlugin:
 global _plugin
 _plugin = BasePlugin()
 
+
 def onStart():
     global _plugin
     _plugin.onStart()
@@ -265,6 +265,13 @@ def onDisconnect(Connection):
 def onHeartbeat():
     global _plugin
     _plugin.onHeartbeat()
+
+def UpdateDevice(Unit, nValue, sValue):
+    # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
+    if (Unit in Devices):
+        if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue):
+            Devices[Unit].Update(nValue=nValue, sValue=str(sValue))
+    return
 
 # Generic helper functions
 def LogMessage(Message):
