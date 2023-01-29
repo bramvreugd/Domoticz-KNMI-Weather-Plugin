@@ -124,6 +124,10 @@ class BasePlugin:
            Domoticz.Device(Name="Regen overmorgen", Unit=16, TypeName="Percentage").Create()
         if not(17 in Devices):
            Domoticz.Device(Name="Zon overmorgen", Unit=17, TypeName="Percentage").Create()     
+        if not(18 in Devices):
+           Domoticz.Device(Name="Min temp", Unit=18, TypeName="Temperature").Create()
+        if not(19 in Devices):
+           Domoticz.Device(Name="Max temp", Unit=19, TypeName="Temperature").Create()
                 
         #calculate forecast from air pressure
         pres=float(Response['luchtd'])
@@ -166,6 +170,8 @@ class BasePlugin:
         UpdateDevice(15,0,Response["d2tmax"])
         UpdateDevice(16,0,Response["d2neerslag"])        
         UpdateDevice(17,0,Response["d2zon"])
+        UpdateDevice(18,0,Response["d0tmin"])
+        UpdateDevice(19,0,Response["d0tmax"])
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
