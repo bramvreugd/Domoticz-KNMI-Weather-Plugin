@@ -2,7 +2,12 @@
 Get the KNMI (Dutch) weather information<br>
 This plugin receives the temperatures, the weather forecast and wind information from the KNMI.
 #
-# New
+# New 1.3
+- Moved from weerlive.nl api 1.0 to api 2.0
+- New device for solar radiation
+- New device for waarschuwingskleur  b.v. code geel of rood 
+
+# New 1.2
 - Day after tommorow temp, wind, rain and sunshine devices
 - More precise wind degree
 - Default names of devices in dutch. Prediction and wind direction of KNMi is also in dutch.
