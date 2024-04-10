@@ -6,15 +6,16 @@
 #
 #
 """
-<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.2.0" externallink="https://www.github.com">
+<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.3.0" externallink="https://www.github.com/bramvreugd/Domoticz-KNMI-Weather-Plugin">
     <description>
         <h2>KNMI weer info</h2><br/>
-        Maximaal 300 x per dag mag de data opgevraagd worden. Door niet minder 1 x per 5 minuten op te halen blijft het aantal onder de 288.
-        Iconen voor de plugin zijn op te halen op :  https://github.com/jackd248/weather-iconic
-        The free service is limited to 300 updates per day. That is once per 5 minutes. 
+        Maximaal 300 x per dag mag de data opgevraagd worden. Door niet minder 1 x per 5 minuten op te halen blijft het aantal onder de 288.<br/>
+        Iconen voor de plugin zijn op te halen op :  https://github.com/jackd248/weather-iconic<br/><br/>
+        KNMI Weergegevens via Weerlive.nl<br/><br/>
+        The free service is limited to 300 updates per day. That is once per 5 minutes.<br/>
     </description>
     <params>
-        <param field="Address" label="Plaats of lat long" width="200px" required="true" default="Utrecht"/>
+       <param field="Address" label="Plaats of lat long" width="200px" required="true" default="Amsterdam"/>
         <param field="Mode1" label="API key" width="150px" default="Demo"/>
         <param field="Mode2" label="    (min)" width="200px" required="true" default="5"/>
         <param field="Mode6" label="Debug" width="150px">
@@ -32,11 +33,15 @@
     </params>
 </plugin>
 """
+
 import Domoticz
 import json
 import urllib
 import urllib.parse
-
+# todo:
+# html voor verwachting selectie dagen en voor verwachting uren
+#<param field="Mode3" label="Aantal dagen verwachting (0-4)" width="200px" required="true" default="2"/>
+#        <param field="Mode4" label="Aantal uren verwachting (0-24)" width="200px" required="true" default="0"/>
 class BasePlugin:
     httpConn = None
     disconnectCount = 0
@@ -45,7 +50,6 @@ class BasePlugin:
     sUrl  = ""
     sPort = "80"
     sHost ="weerlive.nl"
-    #sHost="192.168.178.13"
     Interval = 5*3
     runAgain = Interval
     
@@ -73,7 +77,7 @@ class BasePlugin:
 
     def onConnect(self, Connection, Status, Description):
         if (Status == 0):
-            self.sUrl="/api/json-data-10min.php?key="+Parameters["Mode1"]+"&locatie="+urllib.parse.quote(Parameters["Address"]).replace(' ',"%20")
+            self.sUrl="/api/weerlive_api_v2.php?key="+Parameters["Mode1"]+"&locatie="+urllib.parse.quote(Parameters["Address"]).replace(' ',"%20")
             Domoticz.Debug("Connected successfully. Getting     :"+self.sUrl)
             sendData = { 'Verb' : 'GET',
                          'URL'  :  self.sUrl, 
@@ -88,6 +92,8 @@ class BasePlugin:
             Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description) 
                 
     def processResponse(self,Response):
+        live=Response["liveweer"][0]
+        
         Domoticz.Log("Response received:"+str(Response))
         if not(1 in Devices):
            Domoticz.Device(Name="Temperatuur", Unit=1, TypeName="Temp+Hum+Baro").Create()
@@ -95,14 +101,13 @@ class BasePlugin:
            Domoticz.Device(Name="Verwachting", Unit=2, TypeName="Text").Create()
         if not(3 in Devices):
            Domoticz.Device(Name="Wind", Unit=3, TypeName="Wind+Temp+Chill").Create()
-        
         if not(4 in Devices):
            Domoticz.Device(Name="Min temp morgen", Unit=4, TypeName="Temperature").Create()
         if not(5 in Devices):
            Domoticz.Device(Name="Max temp morgen", Unit=5, TypeName="Temperature").Create()
         if not(6 in Devices):
            Domoticz.Device(Name="Wind morgen", Unit=6, TypeName="Wind").Create()
-        if not(7 in Devices):                                                         
+        if not(7 in Devices):
            Domoticz.Device(Name="Wind overmorgen", Unit=7, TypeName="Wind").Create()
         if not(8 in Devices):
            Domoticz.Device(Name="Regen morgen", Unit=8, TypeName="Percentage").Create()
@@ -128,9 +133,13 @@ class BasePlugin:
            Domoticz.Device(Name="Min temp", Unit=18, TypeName="Temperature").Create()
         if not(19 in Devices):
            Domoticz.Device(Name="Max temp", Unit=19, TypeName="Temperature").Create()
-                
+        if not(20 in Devices):
+           Domoticz.Device(Name="Globale zonnestraling", Unit=20, Type=243,Subtype=31, Options= {'Custom': '1;W/m2'}).Create()
+        if not(21 in Devices):
+           Domoticz.Device(Name="Waarschuwingskleur", Unit=21, TypeName="Text").Create()            
+           
         #calculate forecast from air pressure
-        pres=float(Response['luchtd'])
+        pres=float(live['luchtd'])
         if (pres < 990):     # Rain
             forecast = "4"
         elif (pres < 1010):  # Cloudy
@@ -139,9 +148,9 @@ class BasePlugin:
             forecast = "2"
         else:
             forecast = "1"   # Sunny
-        
-        humi = float(Response['lv'])
-        temp = float(Response['temp'])
+        # live weather
+        humi = float(live['lv'])
+        temp = float(live['temp'])
         if (humi < 31):
             humistat = "2"
         elif (humi > 69):
@@ -150,28 +159,43 @@ class BasePlugin:
             humistat = "1"
         else:
             humistat = "0"
-        UpdateDevice(1, 0, Response['temp']+";"+Response['lv']+";"+humistat+";"+Response['luchtd']+";"+forecast)                   
-        UpdateDevice(2,0,Response["samenv"]+"<br>"+Response["verw"])
-        UpdateDevice(3,0,Response["d0windrgr"]+";"+Response["windr"]+";"+str(10*float(Response["windms"]))+";"+str(10*float(Response["windms"]))+";"+Response["temp"]+";"+Response["gtemp"])
-        UpdateDevice(4,0,Response["d1tmin"])
-        UpdateDevice(5,0,Response["d1tmax"])
-        UpdateDevice(6,0,Response["d1windrgr"]+";"+Response["d1windr"]+";"+str(10*float(Response["d1windms"]))+";"+str(10*float(Response["d1windms"]))+";"+Response["d1tmax"]+";"+Response["d1tmax"])
-        UpdateDevice(7,0,Response["d2windrgr"]+";"+Response["d2windr"]+";"+str(10*float(Response["d2windms"]))+";"+str(10*float(Response["d2windms"]))+";"+Response["d2tmax"]+";"+Response["d2tmax"])
-        UpdateDevice(8,0,Response["d1neerslag"])
-        UpdateDevice(9,0,Response["d1zon"])
-        UpdateDevice(10,0,Response["d0zon"])
-        if(Response["alarm"] !="0"):
-           UpdateDevice(11,0,Response["alarmtxt"])
+        UpdateDevice(1, 0, str(live['temp'])+";"+str(live['lv'])+";"+humistat+";"+str(live['luchtd'])+";"+forecast)
+        UpdateDevice(2,0,"Huidig:"+live["samenv"]+"<br/>Verwachting:"+live["verw"])
+        
+        UpdateDevice(3,0,str(live["windrgr"])+";"+live["windr"]+";"+str(10*live["windms"])+";"+str(10*live["windms"])+";"+str(live["temp"])+";"+str(live["gtemp"]))
+        if(live["alarm"] !=0):
+           UpdateDevice(11,0,live["lkop"]+"<br/>"+live["ltekst"])
         else:
            UpdateDevice(11,0,"")
-        UpdateDevice(12,0,Response["dauwp"])
-        UpdateDevice(13,0,Response["zicht"])
-        UpdateDevice(14,0,Response["d2tmin"])
-        UpdateDevice(15,0,Response["d2tmax"])
-        UpdateDevice(16,0,Response["d2neerslag"])        
-        UpdateDevice(17,0,Response["d2zon"])
-        UpdateDevice(18,0,Response["d0tmin"])
-        UpdateDevice(19,0,Response["d0tmax"])
+        UpdateDevice(12,0,str(live["dauwp"]))
+        UpdateDevice(13,0,str(live["zicht"]/1000))
+        UpdateDevice(20,0,str(live["gr"]))
+        UpdateDevice(21,0,str(live["wrschklr"]))
+        
+        # forecast days
+        # today
+        UpdateDevice(18,0,Response["wk_verw"][0]["min_temp"])
+        UpdateDevice(19,0,Response["wk_verw"][0]["max_temp"])
+        UpdateDevice(10,0,Response["wk_verw"][0]["zond_perc_dag"])
+
+        #tommorow
+        UpdateDevice(4,0,Response["wk_verw"][1]["min_temp"])
+        UpdateDevice(5,0,Response["wk_verw"][1]["max_temp"])
+        UpdateDevice(6,0,str(Response["wk_verw"][1]["windrgr"])+";"+Response["wk_verw"][1]["windr"]+";"+str(10*float(Response["wk_verw"][1]["windms"]))+";"+str(10*float(Response["wk_verw"][1]["windms"]))+";0;0")
+        UpdateDevice(8,0,Response["wk_verw"][1]["neersl_perc_dag"])
+        UpdateDevice(9,0,Response["wk_verw"][1]["zond_perc_dag"])
+        
+        #day after tommorow
+        UpdateDevice(14,0,Response["wk_verw"][2]["min_temp"])
+        UpdateDevice(15,0,Response["wk_verw"][2]["max_temp"])
+        UpdateDevice(7,0,str(Response["wk_verw"][2]["windrgr"])+";"+Response["wk_verw"][2]["windr"]+";"+str(10*float(Response["wk_verw"][2]["windms"]))+";"+str(10*float(Response["wk_verw"][2]["windms"]))+";0;0   ")
+        UpdateDevice(16,0,Response["wk_verw"][2]["neersl_perc_dag"])       
+        UpdateDevice(17,0,Response["wk_verw"][2]["zond_perc_dag"])
+        # todo: do day 3 and 4
+        
+        #todo: forecast hours
+        #hour= Response["uur_verw"] [0..23]
+            
                 
     def onMessage(self, Connection, Data):
         #DumpHTTPResponseToLog(Data)
@@ -195,7 +219,7 @@ class BasePlugin:
                 Response = json.loads( Data["Data"].decode("utf-8", "ignore") )
 
                 #Domoticz.Log("KNMI:"+str(type(Response)))
-                self.processResponse(Response["liveweer"][0])
+                self.processResponse(Response)
                 
         elif (Status == 302):
             Domoticz.Log("KNMI returned a Page Moved Error.")
