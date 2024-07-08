@@ -6,7 +6,7 @@
 #
 #
 """
-<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.3.0" externallink="https://www.github.com/bramvreugd/Domoticz-KNMI-Weather-Plugin">
+<plugin key="KNMI" name="KNMI weather info" author="Bramv" version="1.3.1" externallink="https://www.github.com/bramvreugd/Domoticz-KNMI-Weather-Plugin">
     <description>
         <h2>KNMI weer info</h2><br/>
         Maximaal 300 x per dag mag de data opgevraagd worden. Door niet minder 1 x per 5 minuten op te halen blijft het aantal onder de 288.<br/>
@@ -43,12 +43,12 @@ import urllib.parse
 #<param field="Mode3" label="Aantal dagen verwachting (0-4)" width="200px" required="true" default="2"/>
 #        <param field="Mode4" label="Aantal uren verwachting (0-24)" width="200px" required="true" default="0"/>
 class BasePlugin:
-    httpConn = None
+    HTTPSConn = None
     disconnectCount = 0
-    sProtocol = "HTTP"
+    sProtocol = "HTTPS"
     previousDate = 0
     sUrl  = ""
-    sPort = "80"
+    sPort = "443"
     sHost ="weerlive.nl"
     Interval = 5*3
     runAgain = Interval
@@ -67,9 +67,9 @@ class BasePlugin:
         self.Interval =int(Parameters["Mode2"])*3        
         Domoticz.Heartbeat(20)
         
-        self.httpConn = Domoticz.Connection(Name="KNMIConn", Transport="TCP/IP", Protocol="HTTP", Address=self.sHost, Port=self.sPort) 
+        self.HTTPSConn = Domoticz.Connection(Name="KNMIConn", Transport="TCP/IP", Protocol="HTTPS", Address=self.sHost, Port=self.sPort) 
         Domoticz.Log("Sending connect")
-        self.httpConn.Connect()
+        self.HTTPSConn.Connect()
         Domoticz.Log("Sended connect")
 
     def onStop(self):
@@ -198,7 +198,7 @@ class BasePlugin:
             
                 
     def onMessage(self, Connection, Data):
-        #DumpHTTPResponseToLog(Data)
+        #DumpHTTPSResponseToLog(Data)
         
         strData = Data["Data"].decode("utf-8", "ignore")
         Status = int(Data["Status"])
@@ -207,10 +207,10 @@ class BasePlugin:
         if (Status == 200):
             if ((self.disconnectCount & 1) == 1):
                 Domoticz.Log("Good Response received from KNMI, Disconnecting.")
-                self.httpConn.Disconnect()                
+                self.HTTPSConn.Disconnect()                
             else:
                 Domoticz.Log("Good Response received from KNMI, Dropping connection.")
-                self.httpConn = None
+                self.HTTPSConn = None
             self.disconnectCount = self.disconnectCount + 1
                 
             if(str(Data["Data"][:17],'cp1252')=="Dagelijkse limiet"):
@@ -247,14 +247,14 @@ class BasePlugin:
 
     def onHeartbeat(self):
         #Domoticz.Trace(True)
-        if (self.httpConn != None and (self.httpConn.Connecting() or self.httpConn.Connected())):
+        if (self.HTTPSConn != None and (self.HTTPSConn.Connecting() or self.HTTPSConn.Connected())):
             Domoticz.Debug("onHeartbeat called, Connection is alive.")
         else:
             self.runAgain = self.runAgain - 1
             if self.runAgain <= 0:
-                if (self.httpConn == None):
-                    self.httpConn = Domoticz.Connection(Name="KNMIConn", Transport="TCP/IP", Protocol="HTTP", Address=self.sHost , Port=self.sPort)
-                self.httpConn.Connect()
+                if (self.HTTPSConn == None):
+                    self.HTTPSConn = Domoticz.Connection(Name="KNMIConn", Transport="TCP/IP", Protocol="HTTPS", Address=self.sHost , Port=self.sPort)
+                self.HTTPSConn.Connect()
                 self.runAgain = self.Interval
             else:
                 Domoticz.Debug("onHeartbeat called, run again in "+str(self.runAgain)+" heartbeats.")
@@ -306,7 +306,7 @@ def UpdateDevice(Unit, nValue, sValue):
 # Generic helper functions
 def LogMessage(Message):
     if Parameters["Mode6"] == "File":
-        f = open(Parameters["HomeFolder"]+"http.html","w")
+        f = open(Parameters["HomeFolder"]+"HTTPS.html","w")
         f.write(Message)
         f.close()
         Domoticz.Log("File written")
@@ -325,20 +325,20 @@ def DumpConfigToLog():
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
 
-def DumpHTTPResponseToLog(httpResp, level=0):
-    if (level==0): Domoticz.Debug("HTTP Details ("+str(len(httpResp))+"):")
+def DumpHTTPSResponseToLog(HTTPSResp, level=0):
+    if (level==0): Domoticz.Debug("HTTPS Details ("+str(len(HTTPSResp))+"):")
     indentStr = ""
     for x in range(level):
         indentStr += "----"
-    if isinstance(httpResp, dict):
-        for x in httpResp:
-            if not isinstance(httpResp[x], dict) and not isinstance(httpResp[x], list):
-                Domoticz.Debug(indentStr + ">'" + x + "':'" + str(httpResp[x]) + "'")
+    if isinstance(HTTPSResp, dict):
+        for x in HTTPSResp:
+            if not isinstance(HTTPSResp[x], dict) and not isinstance(HTTPSResp[x], list):
+                Domoticz.Debug(indentStr + ">'" + x + "':'" + str(HTTPSResp[x]) + "'")
             else:
                 Domoticz.Debug(indentStr + ">'" + x + "':")
-                DumpHTTPResponseToLog(httpResp[x], level+1)
-    elif isinstance(httpResp, list):
-        for x in httpResp:
+                DumpHTTPSResponseToLog(HTTPSResp[x], level+1)
+    elif isinstance(HTTPSResp, list):
+        for x in HTTPSResp:
             Domoticz.Debug(indentStr + "['" + x + "']")
     else:
-        Domoticz.Debug(indentStr + ">'" + x + "':'" + str(httpResp[x]) + "'")
+        Domoticz.Debug(indentStr + ">'" + x + "':'" + str(HTTPSResp[x]) + "'")
